@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>BarkGPT 1.5-micro</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background: #121212;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    #chat {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+    }
+
+    .message {
+      margin-bottom: 1rem;
+    }
+
+    .user {
+      text-align: right;
+      color: #00f0ff;
+    }
+
+    .ai {
+      text-align: left;
+      color: #00ff88;
+    }
+
+    #input {
+      display: flex;
+      border-top: 1px solid #444;
+      padding: 0.5rem;
+    }
+
+    #input input {
+      flex: 1;
+      padding: 0.5rem;
+      background: #222;
+      color: white;
+      border: none;
+      border-radius: 5px;
+    }
+
+    #input button {
+      background: #00ff88;
+      border: none;
+      padding: 0.5rem 1rem;
+      margin-left: 0.5rem;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div id="chat"></div>
+  <div id="input">
+    <input id="userInput" type="text" placeholder="Спроси что-нибудь у BarkGPT..." />
+    <button onclick="sendMessage()">Отправить</button>
+  </div>
+
+  <script type="module">
+    import { ChatModule } from "https://esm.sh/@mlc-ai/web-llm";
+
+    let chat;
+
+    async function init() {
+      chat = await ChatModule.create();
+      await chat.reload("RedPajama-INCITE-Chat-3B-v1-q4f32_1"); // Можно сменить модель позже
+    }
+
+    init();
+
+    const chatBox = document.getElementById("chat");
+    const userInput = document.getElementById("userInput");
+
+    async function sendMessage() {
+      const input = userInput.value.trim();
+      if (!input || !chat) return;
+
+      addMessage(input, "user");
+      userInput.value = "";
+
+      addMessage("...", "ai");
+
+      const reply = await chat.chat(input);
+      replaceLastMessage(reply, "ai");
+    }
+
+    function addMessage(text, role) {
+      const msg = document.createElement("div");
+      msg.className = `message ${role}`;
+      msg.innerText = text;
+      chatBox.appendChild(msg);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function replaceLastMessage(text, role) {
+      const messages = chatBox.getElementsByClassName(`message ${role}`);
+      const last = messages[messages.length - 1];
+      last.innerText = text;
+    }
+  </script>
+</body>
+</html>
