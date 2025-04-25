@@ -29,7 +29,7 @@
       appendMessage("Загружаю модель BarkGPT 1.5-micro...", "bot");
 
       chatModule = await webllm.ChatModule.create({
-        model: "mistral-instruct-q4f16_1", // или "tinyllama", "phi-2", "mistral" и т.п.
+        model: "tinyllama", // или "tinyllama", "phi-2", "mistral" и т.п.
         progressCallback: (report) => {
           console.log("Loading: ", report);
         }
