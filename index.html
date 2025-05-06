@@ -69,7 +69,7 @@
       const username = document.getElementById('username').value.trim();
       const model = document.getElementById('model').value;
       if (!username) return alert('Введите username');
-      const response = await fetch('http://147.45.42.163:11435/api/generate', {
+      const response = await fetch('http://147.45.42.163:11436/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, model, prompt: transcript })
