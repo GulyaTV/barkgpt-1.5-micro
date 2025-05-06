@@ -1,43 +1,84 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>BarkGPT 1.5-micro</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BarkGPT Calls</title>
 </head>
 <body>
-  <div id="chat"></div>
-  <textarea id="input" placeholder="Введите сообщение..."></textarea>
-  <button id="send">Отправить</button>
+  <h1>BarkGPT Calls</h1>
+  <div>
+    <label>Username: <input id="username" type="text" placeholder="gulyatv"></label>
+  </div>
+  <div>
+    <label>Model:
+      <select id="model">
+        <option value="tinyllama">BarkGPT 1.5-mini</option>
+        <option value="qwen2.5:1.5b">BarkGPT 1.5-mini-high</option>
+      </select>
+    </label>
+  </div>
+  <div>
+    <button id="start-record">Начать запись</button>
+    <button id="stop-record" disabled>Стоп</button>
+  </div>
+  <p>Распознанный текст: <span id="transcript"></span></p>
+  <button id="send" disabled>Отправить запрос</button>
 
-  <script type="module">
-    import * as webllm from "https://esm.run/@mlc-ai/web-llm";
+  <audio id="player" controls></audio>
 
-    let chatModule;
+  <script>
+    const startBtn = document.getElementById('start-record');
+    const stopBtn = document.getElementById('stop-record');
+    const sendBtn = document.getElementById('send');
+    const transcriptEl = document.getElementById('transcript');
+    let recognition;
+    let transcript = '';
 
-    async function init() {
-      chatModule = await webllm.ChatModule.create({
-        model: "tinyllama", // Вы можете выбрать другую модель, например, "mistral-instruct-q4f16_1"
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognition = new SpeechRecognition();
+      recognition.lang = 'ru-RU';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+
+      recognition.onresult = (event) => {
+        transcript = event.results[0][0].transcript;
+        transcriptEl.textContent = transcript;
+        sendBtn.disabled = false;
+      };
+      recognition.onerror = (e) => console.error(e);
+    } else {
+      alert('Ваш браузер не поддерживает Web Speech API');
+    }
+
+    startBtn.onclick = () => {
+      transcriptEl.textContent = '';
+      sendBtn.disabled = true;
+      recognition.start();
+      startBtn.disabled = true;
+      stopBtn.disabled = false;
+    };
+    stopBtn.onclick = () => {
+      recognition.stop();
+      startBtn.disabled = false;
+      stopBtn.disabled = true;
+    };
+
+    sendBtn.onclick = async () => {
+      const username = document.getElementById('username').value.trim();
+      const model = document.getElementById('model').value;
+      if (!username) return alert('Введите username');
+      const response = await fetch('http://147.45.42.163:11435/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, model, prompt: transcript })
       });
-      document.getElementById("send").disabled = false;
-    }
-
-    async function sendMessage() {
-      const input = document.getElementById("input");
-      const chat = document.getElementById("chat");
-      const userMessage = input.value.trim();
-      if (!userMessage) return;
-
-      chat.innerHTML += `<div><strong>Вы:</strong> ${userMessage}</div>`;
-      input.value = "";
-
-      const response = await chatModule.generate(userMessage);
-      chat.innerHTML += `<div><strong>BarkGPT:</strong> ${response}</div>`;
-    }
-
-    document.getElementById("send").addEventListener("click", sendMessage);
-
-    init();
+      const data = await response.json();
+      const player = document.getElementById('player');
+      player.src = `http://147.45.42.163:11435${data.audio_url}`;
+      player.play();
+    };
   </script>
 </body>
 </html>
