@@ -1,84 +1,62 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
   <title>BarkGPT Calls</title>
 </head>
 <body>
   <h1>BarkGPT Calls</h1>
-  <div>
-    <label>Username: <input id="username" type="text" placeholder="gulyatv"></label>
-  </div>
-  <div>
-    <label>Model:
-      <select id="model">
-        <option value="tinyllama">BarkGPT 1.5-mini</option>
-        <option value="qwen2.5:1.5b">BarkGPT 1.5-mini-high</option>
-      </select>
-    </label>
-  </div>
-  <div>
-    <button id="start-record">Начать запись</button>
-    <button id="stop-record" disabled>Стоп</button>
-  </div>
-  <p>Распознанный текст: <span id="transcript"></span></p>
-  <button id="send" disabled>Отправить запрос</button>
-
-  <audio id="player" controls></audio>
+  <button id="start-recognition">Говорить</button>
+  <p id="transcript">...</p>
+  <p id="response">...</p>
 
   <script>
-    const startBtn = document.getElementById('start-record');
-    const stopBtn = document.getElementById('stop-record');
-    const sendBtn = document.getElementById('send');
-    const transcriptEl = document.getElementById('transcript');
-    let recognition;
-    let transcript = '';
-
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      recognition = new SpeechRecognition();
+    // Проверка поддержки SpeechRecognition
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Ваш браузер не поддерживает SpeechRecognition.");
+    } else {
+      const recognition = new SpeechRecognition();
       recognition.lang = 'ru-RU';
       recognition.interimResults = false;
       recognition.maxAlternatives = 1;
 
-      recognition.onresult = (event) => {
-        transcript = event.results[0][0].transcript;
-        transcriptEl.textContent = transcript;
-        sendBtn.disabled = false;
+      document.getElementById('start-recognition').onclick = () => {
+        recognition.start();
       };
-      recognition.onerror = (e) => console.error(e);
-    } else {
-      alert('Ваш браузер не поддерживает Web Speech API');
+
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        document.getElementById('transcript').textContent = transcript;
+
+        // Отправка запроса к Ollama
+        fetch('http://147.45.42.163/api/generate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: 'qwen2.5:1.5b',
+            prompt: transcript,
+            system: 'Ты BarkGPT 1.5-mini – нейросеть, созданная Гуля ТВ, говори на русском',
+            stream: false
+          })
+        })
+        .then(response => response.json())
+        .then(data => {
+          const responseText = data.response || 'Нет ответа';
+          document.getElementById('response').textContent = responseText;
+
+          // Преобразование текста в речь
+          const utterance = new SpeechSynthesisUtterance(responseText);
+          utterance.lang = 'ru-RU';
+          speechSynthesis.speak(utterance);
+        })
+        .catch(error => {
+          console.error('Ошибка:', error);
+        });
+      };
     }
-
-    startBtn.onclick = () => {
-      transcriptEl.textContent = '';
-      sendBtn.disabled = true;
-      recognition.start();
-      startBtn.disabled = true;
-      stopBtn.disabled = false;
-    };
-    stopBtn.onclick = () => {
-      recognition.stop();
-      startBtn.disabled = false;
-      stopBtn.disabled = true;
-    };
-
-    sendBtn.onclick = async () => {
-      const username = document.getElementById('username').value.trim();
-      const model = document.getElementById('model').value;
-      if (!username) return alert('Введите username');
-      const response = await fetch('http://147.45.42.163:11436/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, model, prompt: transcript })
-      });
-      const data = await response.json();
-      const player = document.getElementById('player');
-      player.src = `http://147.45.42.163:11436${data.audio_url}`;
-      player.play();
-    };
   </script>
 </body>
 </html>
