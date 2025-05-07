@@ -21,7 +21,21 @@
       recognition.interimResults = false;
       recognition.maxAlternatives = 1;
 
+      let recognizing = false;
+
+      recognition.onstart = () => {
+        recognizing = true;
+      };
+
+      recognition.onend = () => {
+        recognizing = false;
+      };
+
       document.getElementById('start-recognition').onclick = () => {
+        if (recognizing) {
+          recognition.stop();
+          return;
+        }
         recognition.start();
       };
 
